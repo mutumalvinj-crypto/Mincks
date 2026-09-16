@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mincks — cancer as a classification problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1A1625;
+  --paper:#FBFAF7;
+  --hema:#4A3B78;
+  --hema-light:#EEEBF6;
+  --eosin:#C4587A;
+  --eosin-light:#FAEDF1;
+  --slate:#6B6478;
+  --rule:#DDD8E4;
+  --amber:#9A6414;
+  --amber-light:#FAF2E3;
+  --green:#3E6B4F;
+  --green-light:#E9F2EC;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;
+  font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{display:flex;min-height:100vh}
+
+/* ---- nav ---- */
+nav{
+  width:232px;flex-shrink:0;border-right:1px solid var(--rule);
+  padding:32px 0 60px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:var(--paper);
+}
+.brand{padding:0 24px 24px;border-bottom:1px solid var(--rule);margin-bottom:16px}
+.brand h1{
+  font-family:Fraunces,serif;font-size:30px;font-weight:600;
+  letter-spacing:-0.02em;line-height:1;color:var(--hema);
+}
+.brand p{font-size:13px;color:var(--slate);margin-top:6px;line-height:1.4}
+nav a{
+  display:block;padding:7px 24px;color:var(--slate);text-decoration:none;
+  font-size:14.5px;border-left:2px solid transparent;
+}
+nav a:hover{color:var(--ink);background:var(--hema-light)}
+nav a.on{color:var(--hema);border-left-color:var(--hema);font-weight:600}
+.navgroup{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--slate);
+  padding:18px 24px 5px;letter-spacing:0.06em;
+}
+
+/* ---- main ---- */
+main{flex:1;padding:56px 48px 140px;max-width:800px}
+section{margin-bottom:80px;scroll-margin-top:24px}
+h2{
+  font-family:Fraunces,serif;font-size:34px;font-weight:600;
+  letter-spacing:-0.02em;line-height:1.15;margin-bottom:8px;
+}
+.sub{color:var(--slate);font-size:16px;margin-bottom:28px;font-style:italic}
+h3{
+  font-family:Fraunces,serif;font-size:21px;font-weight:600;
+  margin:34px 0 10px;letter-spacing:-0.01em;
+}
+h4{font-size:16px;font-weight:600;margin:20px 0 6px}
+p{margin-bottom:14px;max-width:66ch}
+ul,ol{margin:0 0 16px 20px;max-width:64ch}
+li{margin-bottom:6px}
+strong{font-weight:600}
+code{
+  font-family:"IBM Plex Mono",monospace;font-size:0.87em;
+  background:var(--hema-light);padding:1px 5px;border-radius:3px;
+}
+.lede{font-size:19px;line-height:1.6;color:var(--ink)}
+
+/* ---- components ---- */
+.rule{height:1px;background:var(--rule);margin:40px 0;border:0}
+
+.chain{
+  font-family:"IBM Plex Mono",monospace;font-size:15px;
+  background:var(--ink);color:var(--paper);padding:14px 18px;
+  border-radius:5px;margin:14px 0;overflow-x:auto;white-space:nowrap;
+}
+.chain .ok{color:#8FD5A6}
+.chain .bad{color:#F09AAF}
+.chain .part{color:#F0C878}
+
+.card{
+  border:1px solid var(--rule);border-radius:7px;
+  padding:20px 22px;margin-bottom:14px;background:#fff;
+}
+.card.c-a{border-left:4px solid var(--hema)}
+.card.c-b{border-left:4px solid var(--green)}
+.card.c-c{border-left:4px solid var(--eosin)}
+.card.c-d{border-left:4px solid var(--amber)}
+.card.c-e{border-left:4px solid var(--slate)}
+.card h4{margin-top:0;font-family:Fraunces,serif;font-size:19px}
+.card .tag{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;
+  color:var(--slate);display:block;margin-bottom:8px;
+}
+.card p:last-child{margin-bottom:0}
+.card dl{margin:10px 0 0;font-size:15px}
+.card dt{font-weight:600;margin-top:9px;font-size:14px;color:var(--hema)}
+.card dd{margin:1px 0 0;color:var(--ink)}
+
+table{
+  width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;
+}
+th{
+  text-align:left;padding:9px 12px 9px 0;border-bottom:2px solid var(--ink);
+  font-weight:600;font-size:13.5px;
+}
+td{padding:10px 12px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+
+.note{
+  background:var(--amber-light);border-radius:6px;
+  padding:16px 20px;margin:18px 0;font-size:15.5px;
+}
+.note strong{color:var(--amber)}
+.note p:last-child{margin-bottom:0}
+
+.win{
+  background:var(--green-light);border-radius:6px;
+  padding:16px 20px;margin:18px 0;font-size:15.5px;
+}
+.win p:last-child{margin-bottom:0}
+
+details{
+  border:1px solid var(--rule);border-radius:6px;
+  margin-bottom:9px;background:#fff;
+}
+summary{
+  padding:13px 18px;cursor:pointer;font-weight:600;font-size:16px;
+  list-style:none;display:flex;justify-content:space-between;gap:12px;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--slate);font-weight:400;font-size:19px;line-height:1}
+details[open] summary::after{content:"–"}
+summary:hover{background:var(--hema-light)}
+details .body{padding:0 18px 16px;font-size:15.5px}
+details .body p:last-child{margin-bottom:0}
+
+/* ---- classifier tool ---- */
+.tool{
+  border:2px solid var(--ink);border-radius:8px;
+  padding:24px;margin:22px 0;background:#fff;
+}
+.q{margin-bottom:18px}
+.q p{font-weight:600;margin-bottom:8px;font-size:15.5px}
+.opts{display:flex;flex-wrap:wrap;gap:7px}
+.opt{
+  font-family:inherit;font-size:14px;padding:7px 13px;
+  border:1px solid var(--rule);border-radius:20px;background:var(--paper);
+  cursor:pointer;color:var(--ink);
+}
+.opt:hover{border-color:var(--hema);color:var(--hema)}
+.opt[aria-pressed="true"]{background:var(--hema);color:#fff;border-color:var(--hema)}
+.opt:focus-visible{outline:2px solid var(--eosin);outline-offset:2px}
+#verdict{
+  margin-top:20px;padding-top:18px;border-top:1px solid var(--rule);
+  font-size:15.5px;
+}
+#verdict .big{
+  font-family:Fraunces,serif;font-size:25px;font-weight:600;
+  color:var(--hema);display:block;margin-bottom:6px;
+}
+#verdict.empty{color:var(--slate);font-style:italic}
+
+.limits li{margin-bottom:9px;font-size:15.5px}
+
+.money{
+  font-family:"IBM Plex Mono",monospace;font-size:14px;
+  color:var(--hema);font-weight:500;
+}
+
+.foot{
+  border-top:1px solid var(--rule);padding-top:22px;margin-top:60px;
+  font-size:14.5px;color:var(--slate);
+}
+
+@media (max-width:860px){
+  .wrap{flex-direction:column}
+  nav{
+    width:100%;height:auto;position:static;border-right:0;
+    border-bottom:1px solid var(--rule);padding:22px 0 14px;
+  }
+  .brand{padding:0 20px 16px}
+  nav a{display:inline-block;padding:5px 14px;border-left:0;border-bottom:2px solid transparent}
+  nav a.on{border-left:0;border-bottom-color:var(--hema)}
+  .navgroup{padding:12px 20px 3px}
+  main{padding:32px 20px 90px}
+  h2{font-size:27px}
+  body{font-size:16.5px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">
+    <h1>Mincks</h1>
+    <p>Cancer as a classification problem</p>
+  </div>
+  <div class="navgroup">the framework</div>
+  <a href="#start" class="on">Where this starts</a>
+  <a href="#rules">The four rules</a>
+  <a href="#classes">The five classes</a>
+  <a href="#identify">Identify a class</a>
+  <div class="navgroup">how cures work</div>
+  <a href="#mitosis">Mitosis as the substrate</a>
+  <a href="#strategies">The five strategies</a>
+  <a href="#chemistry">Three cures, decoded</a>
+  <div class="navgroup">the hard case</div>
+  <a href="#classc">Why Class C resists</a>
+  <a href="#elephants">The elephants</a>
+  <a href="#limits">Where this breaks</a>
+  <div class="navgroup">what to do</div>
+  <a href="#kenya">The Kenya case</a>
+  <a href="#lab">The lab proposal</a>
+  <a href="#talk">The WHX talk</a>
+</nav>
+
+<main>
+
+<section id="start">
+  <h2>Where this starts</h2>
+  <p class="sub">Named for a school exam that tested the one topic nobody had studied.</p>
+  <p class="lede">Cancer is not one disease. It is also not two hundred. It is roughly five shapes of the same underlying failure, and almost everything that makes the field feel stuck comes from treating it as either one problem or two hundred separate ones.</p>
+  <p>This framework came out of three days of working the problem from first principles — biology, then chemistry, then computation. It is not medical advice and not a treatment protocol. It is a way of organising what is already known so the gaps become visible.</p>
+  <p>The single claim it defends: <strong>we have enough drugs and enough biology to substantially improve outcomes in every class of cancer, if we deploy what we already have with better classification and orchestration.</strong> That claim does not require a breakthrough. It requires infrastructure.</p>
+  <div class="note">
+    <p><strong>How to read this.</strong> Each section builds on the one before. The classifier in section four is the practical core. The limits section is deliberately long — a framework that hides its walls is advocacy, not science.</p>
+  </div>
+</section>
+
+<section id="rules">
+  <h2>The four rules</h2>
+  <p class="sub">What a healthy cell obeys, and what cancer breaks.</p>
+  <p>Every one of your roughly 37 trillion cells carries an identical rulebook. To keep the body alive for eighty years, each cell follows four rules:</p>
+  <table>
+    <tr><th style="width:38%">Rule</th><th>What breaks it in cancer</th></tr>
+    <tr><td><strong>Grow only when told.</strong> Wait for a chemical signal.</td><td>Oncogenes fire without a signal — the cell hears "grow" in silence.</td></tr>
+    <tr><td><strong>Stop when crowded.</strong> Neighbour pressure is itself a signal.</td><td>Tumour suppressors switch off. Nothing says stop. A mass forms.</td></tr>
+    <tr><td><strong>Die when broken.</strong> Trigger your own destruction if damaged.</td><td>p53 mutates — the guardian of the genome. Damage persists and compounds.</td></tr>
+    <tr><td><strong>Stay in your lane.</strong> Stick to your own tissue.</td><td>Adhesion molecules fail. Cells travel. This is metastasis, and it is what kills.</td></tr>
+  </table>
+  <p>Cancer is a cell that has broken at least three of those four. Everything else — tumour sizes, protocols, survival curves — is a consequence of which rules broke, in which tissue, in what order.</p>
+  <h3>Two shapes, not one</h3>
+  <p>The first split that matters is not where the cancer is. It is how uniform it is.</p>
+  <p><strong>Monoculture</strong> — every cell in the tumour shares one dominant defect. Hit the defect, the whole thing collapses. Chronic myeloid leukemia is the clean example: every cell carries the same chromosomal accident.</p>
+  <p><strong>Ecosystem</strong> — millions of cells with different mutations, each with different vulnerabilities. Kill 99% and the surviving 1% regrows, now resistant. Glioblastoma and pancreatic cancer are the paradigm.</p>
+  <div class="win">
+    <p>Cancer is curable when it behaves like a monoculture. It is not curable when it behaves like an ecosystem. Every historical cure either attacked something every cell shared, or hit early enough that the ecosystem had not yet diversified.</p>
+  </div>
+</section>
+
+<section id="classes">
+  <h2>The five classes</h2>
+  <p class="sub">Organised by what shape of attack works, not by which organ is involved.</p>
+  <p>Three properties decide how a cancer responds to treatment: how fast it proliferates, how diverse its cell population is, and what its central pathology actually is (runaway growth, failure to die, or spread). Crossing those gives five populated classes.</p>
+
+  <div class="card c-a">
+    <h4>Class A — single-driver monoculture</h4>
+    <span class="tag">CML · APL · hairy cell leukemia · GIST · HER2+ breast · EGFR/ALK lung</span>
+    <p>Every cell carries one dominant lesion driving one runaway signal. The rest of the cell is close to normal.</p>
+    <dl>
+      <dt>Chemical fingerprint</dt><dd>One kinase cascade phosphorylated 10–50× baseline while ~90 others sit near normal. Profile with phosphoproteomics.</dd>
+      <dt>Attack</dt><dd>One targeted molecule against the driver. Imatinib occupies the ATP pocket of BCR-ABL and the whole disease stalls.</dd>
+      <dt>Attack count</dt><dd>1 drug. Cure rates near 90% where the driver is druggable.</dd>
+      <dt>Failure mode</dt><dd>Resistance mutations in the drug-binding pocket. Solved by rotation to second-generation inhibitors — if you are monitoring for it.</dd>
+    </dl>
+  </div>
+
+  <div class="card c-b">
+    <h4>Class B — tissue-origin vulnerability</h4>
+    <span class="tag">testicular germ cell · retinoblastoma · hepatoblastoma · chordoma · adrenocortical</span>
+    <p>The weakness is inherited from the cell type the tumour came from, not from any specific mutation. These cells run developmental programmes an adult body should have shut down.</p>
+    <dl>
+      <dt>Chemical fingerprint</dt><dd>Three to ten developmental proteins expressed that adult tissue should have silenced — OCT4, NANOG, SOX2, brachyury, fetal enzyme isoforms.</dd>
+      <dt>Attack</dt><dd>Exploit the origin weakness. Germ cells inherited weak DNA repair, so cisplatin crosslinks are lethal to them and survivable for everything else. 95% cure, metastatic disease included.</dd>
+      <dt>Attack count</dt><dd>1–3 drugs at diagnosis, often plus surgery.</dd>
+      <dt>Failure mode</dt><dd>When the vulnerability is a transcription factor rather than an enzyme, it is currently undruggable. Chordoma is stuck here.</dd>
+    </dl>
+  </div>
+
+  <div class="card c-c">
+    <h4>Class C — biomass ecosystem</h4>
+    <span class="tag">glioblastoma · pancreatic · triple-negative breast · DIPG · high-grade ovarian · osteosarcoma</span>
+    <p>Multi-clonal, running production at ceiling, dependent on stress-buffering to survive its own metabolism. This is the uncured family and the one with the worst survival statistics.</p>
+    <dl>
+      <dt>Chemical fingerprint</dt><dd>All six anabolic pipelines saturated at once — glucose, cystine, iron, glutamine, lipids, ion flux — plus chronic unfolded-protein response and local acidosis. Profile with metabolomics.</dd>
+      <dt>Attack</dt><dd>No single target works. Multi-pathway attacks partially succeed in localised disease. Ferroptosis via sulfur-pipeline deprivation is the most target-clean emerging approach.</dd>
+      <dt>Attack count</dt><dd>3–4 coordinated interventions, plus separate handling of the invading phase and the stem-cell niches.</dd>
+      <dt>Failure mode</dt><dd>Everything. Delivery barriers, toxicity ceilings, sub-clonal escape, stem cell niches, self-acidified environment.</dd>
+    </dl>
+  </div>
+
+  <div class="card c-d">
+    <h4>Class D — survival-signalling ecosystem</h4>
+    <span class="tag">CLL · follicular lymphoma · indolent prostate · ER+ breast · myeloma</span>
+    <p>Slow-dividing and mixed-clonal, but the pathology is not growth. These cells simply fail to die on schedule.</p>
+    <dl>
+      <dt>Chemical fingerprint</dt><dd>Near-normal metabolism with anti-death proteins (BCL-2 family) elevated 5–20×, plus chronic low-amplitude receptor signalling. The pathology is in what is absent, not what is present.</dd>
+      <dt>Attack</dt><dd>Block the survival axis at two nodes — BTK upstream, BCL-2 directly. Ibrutinib plus venetoclax produces deep remissions.</dd>
+      <dt>Attack count</dt><dd>2 drugs, fixed duration now preferred over indefinite dosing.</dd>
+      <dt>Failure mode</dt><dd>Cumulative toxicity over years, and the genuinely hard judgement of when to start treating at all.</dd>
+    </dl>
+  </div>
+
+  <div class="card c-e">
+    <h4>Class E — immunogenic ecosystem</h4>
+    <span class="tag">metastatic melanoma · MSI-high colorectal · Merkel cell · high-mutation lung · some kidney</span>
+    <p>Multi-clonal with high mutation burden. The immune system can see these tumours; the tumours have learned to silence it.</p>
+    <dl>
+      <dt>Chemical fingerprint</dt><dd>Immune contact and immune suppression coexisting — PD-L1 high, IDO active, exhausted T-cells present, neoantigens displayed. Loud to the immune system but shouting through a soundproof wall.</dd>
+      <dt>Attack</dt><dd>Release the brakes. PD-1/PD-L1 and CTLA-4 blockade. The immune system does the killing.</dd>
+      <dt>Attack count</dt><dd>1–2 immune-modulating agents. Durable responses in 40–50% of metastatic melanoma.</dd>
+      <dt>Failure mode</dt><dd>Autoimmune toxicity when too many brakes come off at once, and primary resistance in patients whose tumours hide rather than suppress.</dd>
+    </dl>
+  </div>
+
+  <h3>The one-line summary</h3>
+  <table>
+    <tr><th>Class</th><th>Mechanism of the working cure</th></tr>
+    <tr><td>A</td><td>ATP-competitive inhibition → driver kinase blocked</td></tr>
+    <tr><td>B</td><td>DNA-damage induction → repair-deficiency exploited</td></tr>
+    <tr><td>C</td><td>Sulfur-pipeline deprivation → glutathione collapse → ferroptosis <em>(one of several; the newest and most target-clean)</em></td></tr>
+    <tr><td>D</td><td>Survival-signalling blockade → BCL-2 inhibition</td></tr>
+    <tr><td>E</td><td>T-cell unleashing → PD-L1/CTLA-4 blockade</td></tr>
+  </table>
+
+  <h3>Why tissue labels are not enough</h3>
+  <p>"Leukemia" spans classes A, C and D. "Lung cancer" spans A, C and E. "Breast cancer" spans A, C and D. Same organ, fundamentally different diseases requiring fundamentally different attacks.</p>
+  <p>This is why chronic myeloid leukemia is curable with one pill while acute myeloid leukemia kills despite intensive chemotherapy. Same word on the chart. Different class.</p>
+  <div class="win">
+    <p>Modern oncology has been quietly moving toward class-based thinking without formalising it. Lung, melanoma, breast and colorectal all get molecular profiling at diagnosis, and the routing that follows is class routing in everything but name. What is missing is a shared vocabulary, which is why cross-cancer thinking is harder than it should be.</p>
+  </div>
+</section>
+
+<section id="identify">
+  <h2>Identify a class</h2>
+  <p class="sub">The classifier, made usable. Answer from what a pathology report would tell you.</p>
+  <div class="tool">
+    <div class="q">
+      <p>How uniform do the tumour cells look?</p>
+      <div class="opts" data-k="uniform">
+        <button class="opt" data-v="mono">Sheets of near-identical cells</button>
+        <button class="opt" data-v="eco">Visibly varied across the tumour</button>
+      </div>
+    </div>
+    <div class="q">
+      <p>What is the proliferation rate?</p>
+      <div class="opts" data-k="prolif">
+        <button class="opt" data-v="fast">Fast — high Ki-67, most cells cycling</button>
+        <button class="opt" data-v="slow">Slow — cells persist rather than multiply</button>
+      </div>
+    </div>
+    <div class="q">
+      <p>Does the tumour express proteins that adult tissue should have silenced?</p>
+      <div class="opts" data-k="dev">
+        <button class="opt" data-v="yes">Yes — embryonic or fetal markers present</button>
+        <button class="opt" data-v="no">No — adult lineage markers only</button>
+      </div>
+    </div>
+    <div class="q">
+      <p>Mutation burden and immune picture?</p>
+      <div class="opts" data-k="immune">
+        <button class="opt" data-v="hot">High burden, immune cells present but exhausted</button>
+        <button class="opt" data-v="cold">Low-to-moderate burden, few immune cells</button>
+      </div>
+    </div>
+    <div class="q">
+      <p>Is there one dominant hyperactive signalling pathway?</p>
+      <div class="opts" data-k="driver">
+        <button class="opt" data-v="yes">Yes — one cascade far above baseline</button>
+        <button class="opt" data-v="no">No — many pathways elevated together</button>
+      </div>
+    </div>
+    <div id="verdict" class="empty">Answer above and the class, attack shape and failure modes appear here.</div>
+  </div>
+  <div class="note">
+    <p><strong>Hybrids are real, not exceptions.</strong> Adrenocortical carcinoma is B+C. BRCA-mutant ovarian is C with a B twist. Myeloma is D with a C twist. Melanoma with BRAF is A+E. Real classification outputs a primary and a secondary class, and current treatment protocols handle hybrids badly.</p>
+  </div>
+</section>
+
+<section id="mitosis">
+  <h2>Mitosis as the substrate</h2>
+  <p class="sub">Why cancer exists at all, and why your heart does not get it.</p>
+  <p>Cancer is almost entirely a disease of dividing cells. Every division copies three billion base pairs and introduces roughly three to six new mutations. Cancer risk across tissues tracks the number of stem cell divisions in that tissue more strongly than any other single factor.</p>
+  <p>The cleanest natural experiment: mature neurons and cardiac muscle cells stop dividing in infancy. Neither tissue produces cancer from those cells. When "brain cancer" occurs, it comes from glial precursors that still divide — never from mature neurons.</p>
+
+  <h3>The anti-cancer stack</h3>
+  <p>Six properties, each redundantly blocking something cancer needs:</p>
+  <ol>
+    <li><strong>Cell cycle physically dismantled.</strong> Four or more layered locks — p16, p21/p27, hypophosphorylated Rb, epigenetically silenced cycle genes. Not "not dividing." Unable to divide.</li>
+    <li><strong>Mitochondrial quality control on a hair trigger.</strong> 30–40% of cardiomyocyte volume is mitochondria, with damage routed straight to cell death rather than repair.</li>
+    <li><strong>Metabolic inflexibility.</strong> These cells physically cannot execute the Warburg switch. Low glycolytic enzyme expression, high pyruvate dehydrogenase, ATP demand too high for fermentation to cover.</li>
+    <li><strong>DNA damage response biased toward death.</strong> The cell would rather die than mutate. This is also why heart attacks and strokes destroy so much tissue.</li>
+    <li><strong>Immune surveillance</strong> (heart only — the brain is immune-privileged, which is precisely why gliomas happen).</li>
+    <li><strong>No proliferating precursor pool.</strong> Nothing left that can become a tumour.</li>
+  </ol>
+  <div class="win">
+    <p>Class C tissues have the exact inverse of this stack — cycling cells, metabolic flexibility, tolerant quality control, repair-biased damage response, large stem cell pools. <strong>Class C is what happens when the anti-cancer stack is absent.</strong> Nature already solved cancer twice. The question is whether those properties can be induced.</p>
+  </div>
+
+  <h3>The checkpoint chain</h3>
+  <p>A cell cycle is seven checkpoints, each a pass or a halt. Read these as binary strings.</p>
+  <p><strong>Healthy cell</strong> — every gate functional, divides only when signalled:</p>
+  <div class="chain">[ <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> ]&nbsp;&nbsp;growth · nutrition · DNA · replication · completion · spindle · cytokinesis</div>
+  <p><strong>Class E tumour</strong> — growth signal broken, DNA integrity partial, the rest of the cycle largely disciplined. Mutations accumulate over many clean divisions:</p>
+  <div class="chain">[ <span class="bad">0</span> · <span class="ok">1</span> · <span class="part">~</span> · <span class="part">~</span> · <span class="ok">1</span> · <span class="ok">1</span> · <span class="ok">1</span> ]</div>
+  <p><strong>Class C tumour</strong> — nearly everything broken. Each division is chaotic and each broken gate demands a metabolic compensation to survive:</p>
+  <div class="chain">[ <span class="bad">0</span> · <span class="part">~</span> · <span class="bad">0</span> · <span class="bad">0</span> · <span class="bad">0</span> · <span class="bad">0</span> · <span class="bad">0</span> ]</div>
+
+  <h3>The compensation insight</h3>
+  <p>Trace each broken gate to the pipeline that pays for it:</p>
+  <table>
+    <tr><th style="width:32%">Broken checkpoint</th><th>Chemical cost</th><th>Compensation pipeline</th></tr>
+    <tr><td>Growth signal</td><td>Protein synthesis at ceiling needs carbon skeletons</td><td>Glucose uptake, Warburg metabolism</td></tr>
+    <tr><td>DNA integrity</td><td>Mutations produce misfolded proteins</td><td>Unfolded protein response, HSP90, cystine for glutathione</td></tr>
+    <tr><td>Replication</td><td>Stalled forks, maximum nucleotide demand</td><td>Iron for ribonucleotide reductase, glutamine for purines</td></tr>
+    <tr><td>Chromosome segregation</td><td>Aneuploidy imbalances protein production</td><td>More chaperones, more sulfur burn</td></tr>
+    <tr><td>Cytokinesis</td><td>Multinucleation scrambles ion gradients</td><td>Aquaporins, ion pump overexpression</td></tr>
+  </table>
+  <div class="win">
+    <p><strong>The metabolic signature is not the disease. It is the compensation for the disease.</strong> The disease is broken mitotic checkpoints. Everything visible on a metabolic panel is what the cell has to do to survive dividing with its brakes gone. Current oncology attacks the compensations. The checkpoints stay broken, so the cell compensates through another route.</p>
+  </div>
+</section>
+
+<section id="strategies">
+  <h2>The five strategies</h2>
+  <p class="sub">Every cure that works manages mitosis in one of five ways.</p>
+  <p>Work backwards from every cure in the record and this is what remains. No sixth strategy has appeared.</p>
+
+  <details>
+    <summary>1 · Restore a broken checkpoint</summary>
+    <div class="body">
+      <p>Remove the false signal so the cell's own logic resumes. Imatinib does not kill CML cells — it blocks the ATP pocket of BCR-ABL so the false growth signal stops. Cells then follow normal rules: no signal, no division. Trastuzumab does the same for HER2.</p>
+      <p><strong>Works when</strong> there is one specific false signal and a specific molecule that removes it. Class A territory.</p>
+    </div>
+  </details>
+  <details>
+    <summary>2 · Force exit from division</summary>
+    <div class="body">
+      <p>Push cells into a permanent post-mitotic state. ATRA floods APL cells with retinoic acid at a thousand times physiological concentration, overcoming the raised activation threshold of the PML-RARA fusion. Cells mature, exit the cycle, and die naturally. A vitamin derivative curing a leukemia.</p>
+      <p><strong>Works when</strong> a clean differentiation switch exists. Rare — and Class C tissues mostly do not have one, which is a large part of why Class C resists.</p>
+    </div>
+  </details>
+  <details>
+    <summary>3 · Weaponise replication</summary>
+    <div class="body">
+      <p>Introduce damage the tumour cannot repair, which only becomes lethal when the cell tries to divide. Cisplatin crosslinks DNA at guanine; germ cell tumours inherited weak nucleotide excision repair and cannot undo it. PARP inhibitors do the same to BRCA-deficient cells. Cladribine exploits a metabolic quirk so hairy cell leukemia accumulates four times the active drug of a normal cell.</p>
+      <p><strong>Works when</strong> a specific repair or metabolic vulnerability can be identified. Class B territory, plus the BRCA subset of Class C.</p>
+    </div>
+  </details>
+  <details>
+    <summary>4 · Overwhelm mitosis at multiple points</summary>
+    <div class="body">
+      <p>Hit so many stages at once that no sub-clone escapes all of them. Pediatric ALL protocols block the spindle, DNA replication, nucleotide supply and protein synthesis simultaneously. Osteosarcoma's MAP regimen hits three DNA targets. Hodgkin's ABVD hits four.</p>
+      <p><strong>Works when</strong> the tumour is young enough not to have evolved multi-drug resistance. Excellent for pediatric cancers, partial for metastatic Class C.</p>
+    </div>
+  </details>
+  <details>
+    <summary>5 · Bypass mitosis entirely</summary>
+    <div class="body">
+      <p>Kill cells based on what they display, not what they are doing. Checkpoint inhibitors release T-cells that recognise neoantigens regardless of whether the cell is dividing or resting. Rituximab marks CD20-positive cells for immune destruction.</p>
+      <p><strong>Works when</strong> the tumour is immunologically visible. Class E territory, and an adjunct elsewhere.</p>
+    </div>
+  </details>
+
+  <div class="note">
+    <p><strong>Class C is uncured because all five strategies hit a wall at once.</strong> Too many broken checkpoints to restore. No clean differentiation switch to force. Unreliable replication vulnerabilities to weaponise. Sub-clones too sophisticated to overwhelm. Environment too hostile for immune bypass. This is not a gap in effort — it is the one class where every working approach faces a structural obstacle.</p>
+  </div>
+</section>
+
+<section id="chemistry">
+  <h2>Three cures, decoded</h2>
+  <p class="sub">The chemistry, with the metals traced. The template is scurvy.</p>
+  <p>Vitamin C cures scurvy because one enzyme, prolyl hydroxylase, needs ascorbate to keep its iron in the Fe²⁺ state. Subtract ascorbate, the equation goes to zero, collagen fails. Add it back, cured. <strong>A cure is the molecule that makes a necessary equation balance.</strong></p>
+
+  <h3>CML and imatinib — the magnesium story</h3>
+  <p>Every kinase in your body needs two Mg²⁺ ions to hold ATP in position for phosphate transfer. No magnesium, no signal transduction anywhere. In CML, the BCR-ABL fusion is a kinase locked on, running this reaction continuously with no upstream signal:</p>
+  <div class="chain">ATP + 2 Mg²⁺ + protein-OH ──[BCR-ABL, always on]──▶ ADP + protein-O-PO₃²⁻</div>
+  <p>Imatinib is C₂₉H₃₁N₇O — pure organic, no metal. It is shaped to sit exactly where ATP and its magnesium would go. Occupy the seat, nothing to transfer, growth equation cancels to zero.</p>
+
+  <h3>APL and ATRA — the carbon-only cure</h3>
+  <p>The PML-RARA fusion has an activation threshold physiological retinoic acid cannot reach. Cells stay stuck as immature promyelocytes.</p>
+  <div class="chain">retinoic acid (10⁻⁹ M) + PML-RARA ──▶ no response, no maturation</div>
+  <div class="chain">retinoic acid (10⁻⁶ M) + PML-RARA ──▶ maturation genes on ──▶ cell matures ──▶ natural death</div>
+  <p>ATRA is C₂₀H₂₈O₂. Carbon, hydrogen, oxygen. Same equation on both sides — just at a concentration that overwhelms the block.</p>
+
+  <h3>Testicular cancer and cisplatin — the sulfur story</h3>
+  <p>Cisplatin is Pt(NH₃)₂Cl₂. Outside cells, chloride is high and the drug is inert. Inside, chloride drops and water displaces the chlorides:</p>
+  <div class="chain">Pt(NH₃)₂Cl₂ + 2 H₂O ──▶ [Pt(NH₃)₂(H₂O)₂]²⁺ + 2 Cl⁻</div>
+  <div class="chain">[Pt(NH₃)₂(H₂O)₂]²⁺ + 2 guanine-N7 ──▶ Pt crosslink + 2 H₂O</div>
+  <p>DNA is stapled. Most cells repair this. Germ cell tumours, inheriting weak repair from their origin, cannot — so damage persists and apoptosis fires.</p>
+  <p><strong>Watch the sulfur.</strong> Platinum binds sulfur even more tightly than nitrogen. Glutathione, with its thiol group, grabs platinum before it reaches DNA:</p>
+  <div class="chain">2 GSH + Pt(NH₃)₂Cl₂ ──▶ Pt(GS)₂ + 2 NH₃ + 2 Cl⁻</div>
+  <p>Cells rich in glutathione neutralise the drug. This is a main resistance route, and it is why patients on platinum are told to avoid high-glutathione supplements.</p>
+
+  <div class="note">
+    <p><strong>The counterintuitive rule this exposes.</strong> Folk logic says good chemicals fix broken cells — feed them magnesium, sulfur, vitamins. For cancer this is backwards. Tumour cells are not deficient in cofactors; they are hoarding them. Supplementing cystine gives a Class C cell more glutathione and better defences. <em>The correct move is usually deprivation, not supplementation.</em> The cure logic is closer to fasting than to feeding.</p>
+  </div>
+</section>
+
+<section id="classc">
+  <h2>Why Class C resists</h2>
+  <p class="sub">Six barriers. Every failed Class C drug of the last forty years failed at one of them.</p>
+  <p>First the invariants — what stays true across glioblastoma, pancreatic, triple-negative breast, DIPG, high-grade ovarian and osteosarcoma:</p>
+  <ol>
+    <li><strong>Sulfur pipeline always hot.</strong> Cystine imported via the xCT transporter, converted to glutathione, buffering the oxidative stress of running metabolism at ceiling.</li>
+    <li><strong>Warburg metabolism.</strong> Not for energy — for carbon skeletons. Burning glucose fully to CO₂ gives ATP but no building blocks. Stopping partway leaves intermediates to make ribose, serine, fatty acids, NADPH.</li>
+    <li><strong>Iron dependency universal.</strong> Ribonucleotide reductase needs it. So do many quality-control enzymes.</li>
+    <li><strong>Phase switch.</strong> Growing cells and invading cells run different chemistry. Invading cells stop dividing — which makes them invisible to every drug that kills only dividing cells. They are the source of nearly all recurrence.</li>
+    <li><strong>Pathway convergence despite mutation divergence.</strong> Not forty diseases in one tumour. One disease reached by forty different routes, all ending at the same intersection.</li>
+  </ol>
+
+  <h3>The six barriers</h3>
+  <table>
+    <tr><th style="width:30%">Barrier</th><th>What it blocks</th></tr>
+    <tr><td><strong>Blood-brain barrier</strong><br><span style="color:var(--slate);font-size:13px">GS, DIPG</span></td><td>Excludes anything above ~500 Da, anything charged, anything that is a P-glycoprotein substrate. Doxorubicin, cisplatin and all antibodies are out.</td></tr>
+    <tr><td><strong>Stromal fortress</strong><br><span style="color:var(--slate);font-size:13px">pancreatic</span></td><td>Dense cross-linked collagen plus hyaluronic acid creates high interstitial pressure that physically pushes drugs back out.</td></tr>
+    <tr><td><strong>Toxicity ceiling</strong><br><span style="color:var(--slate);font-size:13px">all</span></td><td>Multi-node attacks compound non-linearly. Stack four master-regulator inhibitors and you get no immune system, no wound healing, low platelets and muscle weakness.</td></tr>
+    <tr><td><strong>Sub-clonal escape</strong><br><span style="color:var(--slate);font-size:13px">all, worse in metastatic</span></td><td>Block mTOR, cells shift to MAPK. Any sub-clone independent of your target survives and regrows resistant.</td></tr>
+    <tr><td><strong>Stem cell niches</strong><br><span style="color:var(--slate);font-size:13px">all</span></td><td>Quiescent, efflux-pump rich, protected by perivascular and hypoxic niches. Anti-angiogenic drugs destroyed one niche and the cells migrated to the other.</td></tr>
+    <tr><td><strong>Self-made acidosis</strong><br><span style="color:var(--slate);font-size:13px">advanced disease</span></td><td>Lactate export acidifies to around pH 6.5, which suppresses immune function and protects the tumour. Self-sustaining once established.</td></tr>
+  </table>
+
+  <h3>Class C is Class E with the environment turned up to poisonous</h3>
+  <p>Both are ecosystems. Both sustain themselves through compensation networks. Both respond partially to multi-node attack and both hit the same toxicity wall when attacks escalate. The difference is not architecture — it is the environment.</p>
+  <p>Class E has mild acidity (around pH 7.0), immunosuppressive signalling but a chemically hospitable environment, and high mutation burden producing many visible neoantigens. Release the brakes and immune cells work.</p>
+  <p>Class C has severe acidity, physical exclusion of T-cells, lactate concentrations that are directly toxic to immune cells, and fewer mutations to see in the first place.</p>
+  <div class="win">
+    <p><strong>The prediction this generates:</strong> normalise the Class C environment — reduce acidosis, disrupt the matrix, restore nutrient availability — and checkpoint inhibitors might work in Class C the way they work in Class E. Combining checkpoint blockade with anti-angiogenics already improves response in renal and hepatocellular cancer. This is the most promising unexplored route, and it costs nothing to investigate that does not already exist.</p>
+  </div>
+</section>
+
+<section id="elephants">
+  <h2>The elephants</h2>
+  <p class="sub">What is actually blocking progress, once you run the bottleneck analysis on all five classes.</p>
+  <p>Do the exercise class by class and the same shape appears every time. The drugs exist. The deployment logic is knowable and rules-based per class. And the number of variables per patient — molecular profile, resistance monitoring, toxicity tracking, sequencing decisions, response adaptation — exceeds what any physician can optimise by hand.</p>
+
+  <h3>The universal elephant</h3>
+  <p><strong>Cancer care is bottlenecked by orchestration capacity, not by molecules.</strong></p>
+  <p>Every class needs the same six things, and none of them is a new drug:</p>
+  <ul>
+    <li>Molecular classification at diagnosis</li>
+    <li>Class-appropriate first-line selection</li>
+    <li>Adaptive monitoring integrating liquid biopsy, imaging and symptoms</li>
+    <li>Rules-based rotation and sequencing as resistance emerges</li>
+    <li>Toxicity tracking with defined intervention triggers</li>
+    <li>Long-term surveillance with recurrence-detection triggers</li>
+  </ul>
+  <p>Each is buildable now. Most clinics implement partial versions manually and inconsistently. A CML patient in a low-resource setting often gets imatinib without the molecular monitoring, so resistance is detected only at clinical relapse — too late, from a disease that is otherwise near-curable.</p>
+
+  <h3>Two class-specific technology elephants</h3>
+  <div class="card c-b">
+    <h4>Class B — we know the target and cannot drug it</h4>
+    <p>Brachyury in chordoma. Developmental transcription factors generally. Floppy proteins with large flat surfaces and no clean binding pocket. This is a chemistry problem, and it is exactly the kind of problem structure prediction and molecular design are getting good at.</p>
+  </div>
+  <div class="card c-c">
+    <h4>Class C — we know the attack shape and cannot deploy it safely</h4>
+    <p>Multi-node attack is clearly indicated. Toxicity and delivery physics prevent it. This is an engineering problem — targeted delivery, nanoparticles, focused ultrasound for the blood-brain barrier, pH-responsive release.</p>
+  </div>
+  <p>These are not the same elephant and they do not want the same investment. A cancer effort has to pick one.</p>
+
+  <div class="note">
+    <p><strong>Why this is the sharper version of "AI will help with cancer."</strong> Not "AI will discover the cure molecule." Instead: AI can orchestrate adaptive multi-modal treatment across dozens of variables per patient, updating weekly on liquid biopsy data, in a way no clinical team can do manually. That claim needs no speculative science. The drugs already exist. The orchestration does not.</p>
+  </div>
+</section>
+
+<section id="limits">
+  <h2>Where this breaks</h2>
+  <p class="sub">Presenting the limits deliberately makes the framework credible. Hiding them makes it advocacy.</p>
+  <ul class="limits">
+    <li><strong>Monoculture logic does not transfer to ecosystems, or the reverse.</strong> Applied retroactively to CML, APL and testicular cancer, the ecosystem framework scored D and F. It would have missed every one of those cures. Classification has to come first — always.</li>
+    <li><strong>Elegance is not evidence.</strong> The four-node attack hypothesis survives theoretical stress-testing and has never been tested clinically. Two different four-node architectures both sound convincing. They cannot both be right.</li>
+    <li><strong>Self-grading inflates.</strong> Reasoning toward an answer you already know is not prediction. Every accuracy claim here needs blinded external validation before it means anything.</li>
+    <li><strong>Thin data produces confident wrong answers.</strong> Extrapolating from tissue origin to drug response failed on angiosarcoma. Rare cancers get provisional classifications, not confident ones.</li>
+    <li><strong>The classifier has a missing dimension.</strong> Chordoma exposed it: some cancers are spatially focal enough that surgery dominates, and the five-class scaffold has no axis for that.</li>
+    <li><strong>Hybrid classes are common.</strong> Single-class purity is not the norm, and current treatment protocols handle hybrids badly.</li>
+    <li><strong>The toxicity wall is real and not solved by better targeting alone.</strong> Every multi-node attack compounds non-linearly in exactly the patients who have the least physiological reserve.</li>
+    <li><strong>Class C is a family, not a problem.</strong> Glioblastoma's barrier is the blood-brain barrier. Pancreatic cancer's is fibrotic stroma. A "Class C solution" is several different solutions.</li>
+    <li><strong>Knowing the target is not solving the disease.</strong> Class B transcription factor targets have been known for decades and remain undruggable. Drug development takes ten to fifteen years and usually fails.</li>
+    <li><strong>Reproduction-management approaches control, they do not cure.</strong> Adaptive therapy, differentiation therapy, checkpoint reactivation — all produce benefit, none has cured metastatic disease.</li>
+    <li><strong>Format is not evidence.</strong> A framework with tiered dosing tables and staged phases reads as rigorous whether the underlying biology is right or wrong. That applies to this document as much as to anything else.</li>
+  </ul>
+  <div class="note">
+    <p><strong>The line worth keeping.</strong> Research direction and treatment protocol look similar on a slide and are completely different things. Anything here that names drugs, doses, sequences or stages has crossed from the first into the second, and should not be trusted or acted on. Nothing in this framework is medical advice.</p>
+  </div>
+</section>
+
+<section id="kenya">
+  <h2>The Kenya case</h2>
+  <p class="sub">The highest-impact interventions do not require drugs that do not exist yet.</p>
+  <p>Kenya's cancer burden is dominated by cervical, breast, oesophageal, stomach, liver, prostate and Kaposi sarcoma. Map those to classes and the opportunities separate cleanly into two kinds.</p>
+
+  <h3>Prevention — where the trigger is known</h3>
+  <table>
+    <tr><th>Cancer</th><th>Class</th><th>Intervention that already exists</th></tr>
+    <tr><td>Cervical</td><td>C</td><td>HPV vaccination. Prevents the initiating event entirely.</td></tr>
+    <tr><td>Liver</td><td>C</td><td>Hepatitis B vaccination, plus improved maize and groundnut storage to reduce aflatoxin exposure.</td></tr>
+    <tr><td>Stomach, oesophageal</td><td>C</td><td>Partially addressable through known environmental and dietary risk reduction.</td></tr>
+  </table>
+  <div class="win">
+    <p>These are Class C cancers — the uncured family — where the class is predictable from environmental exposure and the trigger can be prevented from ever activating. <strong>Kenya's biggest cancer opportunities are vaccines and food storage.</strong> The framework explains why: you cannot cure the class, but you can prevent entry into it.</p>
+  </div>
+
+  <h3>Classification — where the drugs already exist</h3>
+  <p>Correct class routing improves outcomes with drugs already on the market:</p>
+  <ul>
+    <li><strong>CML</strong> — PCR for BCR-ABL routes Class A patients to imatinib, now off-patent and cheap. A near-curable disease that goes untreated when undiagnosed.</li>
+    <li><strong>Breast</strong> — ER/PR/HER2 subtyping separates Class A (HER2+), Class D (ER+) and Class C (triple-negative), each needing a different attack.</li>
+    <li><strong>Colorectal</strong> — MSI testing identifies Class E patients who would benefit from checkpoint inhibitors rather than default chemotherapy.</li>
+  </ul>
+
+  <h3>The minimum viable pipeline</h3>
+  <p>A stripped-down classification infrastructure is achievable at Kenyan scale:</p>
+  <ul>
+    <li>Basic tissue diagnosis <span class="money">(exists)</span></li>
+    <li>Targeted genomic panel, five to ten key genes, PCR-based <span class="money">(~$50/patient with local capacity)</span></li>
+    <li>Expanded immunohistochemistry, around ten markers <span class="money">(exists, expandable)</span></li>
+    <li>Standardised outcome tracking <span class="money">(a data problem, not a technology problem)</span></li>
+  </ul>
+  <p>Tens of dollars per patient, not thousands. Not as sophisticated as a full research pipeline, but substantially better than current practice.</p>
+  <div class="win">
+    <p><strong>The leapfrog argument.</strong> Kenya skipped landlines and went to mobile. Skipped fixed banking and invented mobile money. Being late to build medical infrastructure could mean building it right, once, with modern tools — rather than inheriting the sunk costs of a system designed around one-drug-per-trial thinking.</p>
+  </div>
+</section>
+
+<section id="lab">
+  <h2>The lab proposal</h2>
+  <p class="sub">What a research lab actually is, structurally, and what the minimum real version costs.</p>
+  <p>Progress on this does not come from a good framework. It comes from a group of people with a physical place, a funding line, and a question narrow enough to answer in three years. That is what a lab is. Everything below is the business structure of one, in plain terms.</p>
+
+  <h3>What a research lab is, mechanically</h3>
+  <p>Four things, none of them optional:</p>
+  <ol>
+    <li><strong>A question.</strong> Narrow enough that a specific experiment either confirms or kills it. "Cure cancer" is not a question. "Do amino acid consumption profiles cluster into the same five classes as molecular profiling?" is.</li>
+    <li><strong>An institutional home.</strong> Labs work with human samples, which means ethics approval, which means a hospital or university affiliation. You cannot do this from a flat. In Kenya that means partnership with a university or a referral hospital from the start.</li>
+    <li><strong>A funding line.</strong> Research does not generate revenue. It is funded by grants (competitive, slow, prestigious), philanthropy (faster, relationship-driven), industry partnership (fastest, comes with strings on who owns the output), or institutional budget. Most labs run on two or three simultaneously.</li>
+    <li><strong>People with credentials.</strong> Grant bodies fund principal investigators, not ideas. A lab needs at least one person with a doctorate and a publication record in the field to be fundable at all. Finding and partnering with that person is the first task, not a later one.</li>
+  </ol>
+
+  <h3>The question worth asking</h3>
+  <p>From everything above, one study design stands out as both novel and achievable:</p>
+  <div class="card c-c">
+    <h4>Amino acid consumption profiling as a classification dimension</h4>
+    <p><strong>The hypothesis.</strong> Each of the five classes has a distinct amino acid uptake and turnover signature, because each class runs a different compensation network and compensation networks consume amino acids differently. Class C should show extreme uptake across the full spectrum. Class E should show specific tryptophan turnover via IDO. Class B should show developmentally inappropriate composition profiles.</p>
+    <p><strong>Why it matters.</strong> It adds a dimension independent of mutations, it reflects what cells are actually doing rather than what their DNA says, and it could reveal that Class C is not one class but three or four — which would explain why Class C treatment keeps failing.</p>
+    <p><strong>Why Kenya could lead on it.</strong> Mass spectrometry for amino acid profiling is cheaper and more scalable than comprehensive genomic sequencing. A system with less legacy investment in genomics-centred oncology can adopt a metabolomics-centred approach at scale more readily.</p>
+    <p><strong>What would falsify it.</strong> If profiles cluster randomly, or track tissue of origin rather than class, the hypothesis is dead and that is a publishable result too.</p>
+  </div>
+
+  <h3>Three stages, honestly costed</h3>
+  <table>
+    <tr><th style="width:22%">Stage</th><th>What happens</th><th>Rough scale</th></tr>
+    <tr>
+      <td><strong>Pilot</strong><br><span style="color:var(--slate);font-size:13px">year 1</span></td>
+      <td>Partner with one hospital. 40–60 archived tumour samples across known classes. Run amino acid profiling. Ask whether the signatures separate at all. One paper either way.</td>
+      <td><span class="money">$60k–150k</span><br>1 PI, 1 technician, sample costs, machine time</td>
+    </tr>
+    <tr>
+      <td><strong>Validation</strong><br><span style="color:var(--slate);font-size:13px">years 2–3</span></td>
+      <td>If the pilot separates, expand to 300–500 prospectively collected samples with full clinical follow-up. Test whether profiles predict treatment response better than current markers.</td>
+      <td><span class="money">$400k–1M</span><br>Multi-site, dedicated staff, data infrastructure</td>
+    </tr>
+    <tr>
+      <td><strong>Translation</strong><br><span style="color:var(--slate);font-size:13px">years 4+</span></td>
+      <td>Build the classification pipeline as a clinical decision tool. Regulatory approval. Deployment across Kenyan oncology centres.</td>
+      <td><span class="money">$2M+</span><br>Requires institutional or national partnership</td>
+    </tr>
+  </table>
+  <p>The pilot is the only number that matters right now. Everything after it is contingent on the pilot producing a signal, and most pilots do not.</p>
+
+  <h3>The second track — the orchestration pipeline</h3>
+  <p>Separate from the lab, and cheaper, because it needs no wet-lab work:</p>
+  <ul>
+    <li><strong>Layer 1 — characterisation.</strong> Standardised intake of what is already collected at diagnosis, structured rather than scattered across paper files.</li>
+    <li><strong>Layer 2 — class assignment.</strong> The classifier, applied consistently, producing a primary and secondary class for every patient.</li>
+    <li><strong>Layer 3 — strategy matching.</strong> Which of the five mitosis-management strategies applies, given this patient's class and what is actually available in Kenyan formularies.</li>
+    <li><strong>Layer 4 — outcome tracking.</strong> What was given, what happened, what changed. This is the layer nobody builds and the one that makes everything else compound.</li>
+    <li><strong>Layer 5 — learning.</strong> Each patient's outcome sharpens the next patient's recommendation.</li>
+  </ul>
+  <p>This is software plus clinical process, not research. It is fundable as health-systems strengthening rather than as science, which is a different set of funders and a faster timeline. It is also the thing that would help patients soonest.</p>
+
+  <div class="note">
+    <p><strong>Sequencing advice.</strong> Build the orchestration track first. It produces visible benefit within a year, it generates the structured data the research track needs, and it creates the institutional relationships that make the lab fundable. Labs built on top of a working data pipeline get funded; labs proposed in the abstract usually do not.</p>
+  </div>
+</section>
+
+<section id="talk">
+  <h2>The WHX talk</h2>
+  <p class="sub">Five claims that survive scrutiny, in the order that builds.</p>
+  <ol>
+    <li><strong>Cancer is five shapes, not one disease or two hundred.</strong> Classification by attack-shape predicts treatment response better than classification by organ. Open here — it reframes everything that follows.</li>
+    <li><strong>Every cure that works manages mitosis in one of five ways.</strong> Restore a checkpoint, force exit from division, weaponise replication, overwhelm it, or bypass it. No sixth strategy has appeared.</li>
+    <li><strong>Class C resists because all five strategies hit a wall at once.</strong> Not a gap in effort. A structural fact about the disease. This is where the deaths are concentrated and where the next decade's work has to go.</li>
+    <li><strong>The universal bottleneck is orchestration, not molecules.</strong> We have enough drugs. We do not have the infrastructure to deploy them per patient, adaptively, at the scale one tumour requires. This is what computation is uniquely good at and what no clinical team can do by hand.</li>
+    <li><strong>For Kenya, prevention and classification beat waiting for cures.</strong> HPV and hepatitis B vaccination, aflatoxin control, and a cheap classification pipeline would improve outcomes measurably without requiring a single drug that does not already exist.</li>
+  </ol>
+  <h3>The closing move</h3>
+  <p>Show the limits section. Tell the room the framework was stress-tested by writing increasingly polished-looking protocols on top of it and watching for the moment it stopped being research and started reading as medical advice. The line is thinner than it should be, and knowing where it sits is the most useful thing the exercise produced.</p>
+  <p>Then the ask: not funding for a cure, but a partner institution for the pilot and a pathway to build the orchestration layer. Both are concrete. Both are answerable in the room.</p>
+
+  <div class="foot">
+    <p>Mincks is a thinking framework, not clinical guidance. Nothing here should inform the treatment of any patient. Claims marked as established are drawn from published oncology; claims marked as speculative are reasoning, not evidence, and several of them are probably wrong.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('nav a'));
+  var secs=links.map(function(a){return document.getElementById(a.getAttribute('href').slice(1));});
+  function mark(){
+    var y=window.scrollY+140,best=0;
+    secs.forEach(function(s,i){ if(s&&s.offsetTop<=y) best=i; });
+    links.forEach(function(a,i){ a.classList.toggle('on',i===best); });
+  }
+  window.addEventListener('scroll',mark,{passive:true});
+  mark();
+
+  var picked={};
+  var rules=[
+    {cls:'Class A — single-driver monoculture',
+     test:function(p){return p.uniform==='mono'&&p.driver==='yes'&&p.dev==='no';},
+     attack:'One targeted molecule against the driver. Identify the specific lesion first, then select the matching inhibitor.',
+     watch:'Resistance mutations in the binding pocket. Monitor molecularly and rotate to a second-generation inhibitor before clinical relapse.'},
+    {cls:'Class B — tissue-origin vulnerability',
+     test:function(p){return p.dev==='yes';},
+     attack:'Exploit the weakness inherited from the cell of origin — repair deficiency, differentiation sensitivity, or a tissue-specific metabolic route.',
+     watch:'If the vulnerability is a transcription factor rather than an enzyme, no drug currently exists. Surgery often dominates for focal disease.'},
+    {cls:'Class C — biomass ecosystem',
+     test:function(p){return p.uniform==='eco'&&p.prolif==='fast'&&p.immune==='cold';},
+     attack:'No single target works. Multi-pathway attack, with separate handling for the non-dividing invasive edge and the stem cell niches.',
+     watch:'Delivery barriers, compounding toxicity, sub-clonal escape, self-made acidosis. This is the uncured family — expect partial response, plan for recurrence.'},
+    {cls:'Class D — survival-signalling ecosystem',
+     test:function(p){return p.prolif==='slow'&&p.uniform==='eco';},
+     attack:'Block the survival axis at two nodes rather than attacking growth. Fixed duration now preferred over indefinite dosing.',
+     watch:'Cumulative toxicity over years, and the genuinely hard judgement of when to begin treating at all.'},
+    {cls:'Class E — immunogenic ecosystem',
+     test:function(p){return p.immune==='hot';},
+     attack:'Release the immune brakes and let the immune system do the killing. Checkpoint blockade first line.',
+     watch:'Autoimmune adverse events rise sharply with each additional brake released. Primary resistance in tumours that hide rather than suppress.'}
+  ];
+
+  function verdict(){
+    var v=document.getElementById('verdict');
+    var keys=['uniform','prolif','dev','immune','driver'];
+    var done=keys.every(function(k){return picked[k];});
+    if(!done){
+      var n=keys.filter(function(k){return picked[k];}).length;
+      v.className='empty';
+      v.textContent=n===0
+        ? 'Answer above and the class, attack shape and failure modes appear here.'
+        : (5-n)+' more to go.';
+      return;
+    }
+    var hits=rules.filter(function(r){return r.test(picked);});
+    v.className='';
+    if(!hits.length){
+      v.innerHTML='<span class="big">Hybrid or unclassified</span>'+
+        '<p>This combination does not match a clean single class. That is common and not a failure of the answers — real tumours are frequently hybrids. Weigh the dominant feature: immune visibility points to E, developmental markers to B, six-pipeline saturation to C.</p>';
+      return;
+    }
+    var h=hits[0];
+    var extra=hits.length>1
+      ? '<p style="color:var(--slate)"><em>Secondary class also indicated: '+hits[1].cls+'. Hybrids need arms from both.</em></p>'
+      : '';
+    v.innerHTML='<span class="big">'+h.cls+'</span>'+
+      '<p><strong>Attack shape.</strong> '+h.attack+'</p>'+
+      '<p><strong>What will go wrong.</strong> '+h.watch+'</p>'+extra+
+      '<p style="color:var(--slate);font-size:14px">Classification tool for learning the framework. Not a diagnostic.</p>';
+  }
+
+  [].forEach.call(document.querySelectorAll('.opt'),function(b){
+    b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',function(){
+      var group=b.parentNode, k=group.dataset.k;
+      [].forEach.call(group.children,function(o){o.setAttribute('aria-pressed','false');});
+      b.setAttribute('aria-pressed','true');
+      picked[k]=b.dataset.v;
+      verdict();
+    });
+  });
+})();
+</script>
+</body>
+</html>
